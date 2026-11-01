@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora Nutricional</title>
+    <!-- O seu arquivo CSS externo continua linkado aqui -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <h2>Calculadora Nutricional</h2>
+    
+    <div class="form-group">
+        <label>Peso (kg):</label>
+        <input type="number" id="peso" value="70" step="0.1">
+    </div>
+    <div class="form-group">
+        <label>Altura (cm):</label>
+        <input type="number" id="altura" value="175">
+    </div>
+    <div class="form-group">
+        <label>Idade (anos):</label>
+        <input type="number" id="idade" value="25">
+    </div>
+    <div class="form-group">
+        <label>Sexo Biológico:</label>
+        <select id="sexo">
+            <option value="M">Masculino</option>
+            <option value="F">Feminino</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label>Nível de Atividade:</label>
+        <select id="atividade">
+            <option value="SEDENTARY">Sedentário</option>
+            <option value="LIGHTLY_ACTIVE">Levemente Ativo</option>
+            <option value="MODERATELY_ACTIVE">Moderadamente Ativo</option>
+            <option value="VERY_ACTIVE">Muito Ativo</option>
+            <option value="EXTRA_ACTIVE">Extremamente Ativo</option>
+        </select>
+    </div>
+
+    <button type="button" id="btn-calcular">Calcular Metas</button>
+
+    <div id="resultado"></div>
+
+    <script>
+        // 1. DICIONÁRIO DE MULTIPLICADORES DE ATIVIDADE
+        const ActivityLevel = {
+            SEDENTARY: 1.2,
+            LIGHTLY_ACTIVE: 1.375,
+            MODERATELY_ACTIVE: 1.55,
+            VERY_ACTIVE: 1.725,
+            EXTRA_ACTIVE: 1.9
+        };
+
+        // 2. CLASSE COM A LÓGICA MATEMÁTICA CORRIGIDA (MÁXIMO 1.6g/kg)
+        class NutritionalCalculator {
+            static calculate_bmr(weight_kg, height_cm, age_years, is_male) {
+                if (weight_kg <= 0 || height_cm <= 0 || age_years <= 0) {
+                    throw new Error("Peso, altura e idade devem ser valores positivos.");
+                }
+                if (is_male) {
+                    return (10 * weight_kg) + (6.25 * height_cm) - (5 * age_years) + 5;
+                } else {
+                    return (10 * weight_kg) + (6.25 * height_cm) - (5 * age_years) - 161;
+                }
+            }
+
+            static calculate_tdee(bmr, activity_level_value) {
+                return bmr * activity_level_value;
+            }
+
+            static calculate_macro_split(tdee, weight_kg) {
+                // Modificado: Alvo ajustado para o máximo de 1.6g de proteína por quilo corporal
+                const protein_grams = weight_kg * 1.6;
+                const protein_calories = protein_grams * 4.0;
+
+                // Mantido: Gordura definida como 25% das calorias diárias totais
+                const fat_calories = tdee * 0.25;
+                const fat_grams = fat_calories / 9.0;
+
+                // O restante das calorias preenche os carboidratos
+                const carbs_calories = tdee - (protein_calories + fat_calories);
+                const carbs_grams = carbs_calories / 4.0;
+
+                return {
+                    protein: protein_grams,
+                    carbs: carbs_grams,
+                    fat: fat_grams
+                };
+            }
+        }
+
+        // 3. CAPTURA DOS CLIQUES E EXIBIÇÃO NA TELA
+        document.getElementById("btn-calcular").addEventListener("click", () => {
+            const peso = parseFloat(document.getElementById("peso").value);
+            const altura = parseFloat(document.getElementById("altura").value);
+            const idade = parseInt(document.getElementById("idade").value);
+            const is_male = document.getElementById("sexo").value === "M";
+            const nivel_atividade_str = document.getElementById("atividade").value;
+            
+            const activity_level_value = ActivityLevel[nivel_atividade_str];
+
+            try {
+                const bmr = NutritionalCalculator.calculate_bmr(peso, altura, idade, is_male);
+                const tdee = NutritionalCalculator.calculate_tdee(bmr, activity_level_value);
+                const macros = NutritionalCalculator.calculate_macro_split(tdee, peso);
+
+                const div_resultado = document.getElementById("resultado");
+                div_resultado.style.display = "block";
+                div_resultado.innerHTML = `
+                    <p><strong>BMR (Metabolismo Basal):</strong> ${bmr.toFixed(2)} kcal</p>
+                    <p><strong>TDEE (Gasto Diário Total):</strong> ${tdee.toFixed(2)} kcal</p>
+                    <hr style="border: 0; border-top: 1px solid #ccc; margin: 15px 0;">
+                    <p><strong>Proteínas:</strong> ${macros.protein.toFixed(1)}g <small style="color: #666;">(1.6g/kg)</small></p>
+                    <p><strong>Carboidratos:</strong> ${macros.carbs.toFixed(1)}g</p>
+                    <p><strong>Gorduras:</strong> ${macros.fat.toFixed(1)}g <small style="color: #666;">(25%)</small></p>
+                `;
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+    </script>
+</body>
+</html>
